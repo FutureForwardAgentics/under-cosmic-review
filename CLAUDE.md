@@ -413,6 +413,10 @@ const INQUISITOR_DIALOGUE = {
 
 ## Development Notes
 
+### Development Workflow
+- Never use the git commit command after a task is finished.
+- This project uses GitButler for commit management - all commits must be made through the GitButler interface.
+
 ### Cosmic Authenticity Guidelines
 - Maintain the Grand Galactic Inquisitor's bureaucratic, evaluative tone
 - Include proper cosmic authority references and galactic oversight
