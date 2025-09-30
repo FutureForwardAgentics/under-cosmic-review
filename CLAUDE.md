@@ -414,8 +414,7 @@ const INQUISITOR_DIALOGUE = {
 ## Development Notes
 
 ### Development Workflow
-- Never use the git commit command after a task is finished.
-- This project uses GitButler for commit management - all commits must be made through the GitButler interface.
+- When you're done with a task where code was created or files edited, please run the gitbutler mcp update_branches command.
 
 ### Cosmic Authenticity Guidelines
 - Maintain the Grand Galactic Inquisitor's bureaucratic, evaluative tone
