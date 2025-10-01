@@ -75,6 +75,38 @@
             font-style: italic;
         }
 
+        .inquisitor-status {
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid #FFD700;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 12px 0;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .status-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .status-label {
+            font-size: 10px;
+            color: #9966FF;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .status-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #FFD700;
+            text-transform: uppercase;
+        }
+
         .phase-indicator {
             font-size: 18px;
             font-weight: bold;
@@ -234,6 +266,22 @@
 
     <div id="inquisitorPanel">
         <div class="inquisitor-title">⚖️ Grand Galactic Inquisitor ⚖️</div>
+
+        <div class="inquisitor-status">
+            <div class="status-item">
+                <div class="status-label">Phase</div>
+                <div class="status-value" id="inquisitorPhase">Initialization</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Turn</div>
+                <div class="status-value" id="inquisitorTurn">1</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Current Player</div>
+                <div class="status-value" id="inquisitorPlayer">1</div>
+            </div>
+        </div>
+
         <div class="inquisitor-text" id="inquisitorText">
             Cosmic evaluation protocols initializing...
         </div>
@@ -1242,7 +1290,10 @@
     }
 
     function updateUIElements() {
-        document.getElementById('phaseIndicator').textContent = phaseManager.getPhaseName();
+        const phaseName = phaseManager.getPhaseName();
+
+        // Update left panel
+        document.getElementById('phaseIndicator').textContent = phaseName;
         document.getElementById('turnNumber').textContent = gameState.turnNumber;
         document.getElementById('currentPlayer').textContent = gameState.currentPlayer;
         document.getElementById('p1Trials').textContent = gameState.players[0].cosmicTrials;
@@ -1250,6 +1301,11 @@
         document.getElementById('p2Trials').textContent = gameState.players[1].cosmicTrials;
         document.getElementById('p2Failures').textContent = gameState.players[1].cosmicFailures;
         document.getElementById('debugInfo').textContent = JSON.stringify(gameState.getDebugState(), null, 2);
+
+        // Update Inquisitor panel status display
+        document.getElementById('inquisitorPhase').textContent = phaseName;
+        document.getElementById('inquisitorTurn').textContent = gameState.turnNumber;
+        document.getElementById('inquisitorPlayer').textContent = gameState.currentPlayer;
     }
 
     function startGame() {
