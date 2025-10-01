@@ -1147,9 +1147,11 @@
         lairContainer.y = playerIndex === 0 ? 0 : 80;
         container.addChild(lairContainer);
 
-        // Render hand cards (centered)
+        // Render hand cards (centered to align with lair center)
         const handWidth = player.hand.length * (CARD_WIDTH + 10) - 10;
-        const handOffsetX = -handWidth / 2 + (2 * (CARD_WIDTH + 10)); // Offset to align with lair
+        const lairWidth = 4 * (CARD_WIDTH + 10) - 10; // Boss + 3 installations max
+        const lairCenterX = lairWidth / 2;
+        const handOffsetX = lairCenterX - (handWidth / 2);
 
         player.hand.forEach((card, index) => {
             const cardSprite = new PixiCard(card, 'room');
