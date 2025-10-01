@@ -3,7 +3,7 @@
  * All card types extend from this base class
  */
 
-import { CARD_WIDTH, CARD_HEIGHT } from '../main.js';
+import { CARD_WIDTH, CARD_HEIGHT, getAnimationSystem } from '../main.js';
 
 export class Card extends PIXI.Container {
     constructor(cardData, cardType = 'room') {
@@ -102,21 +102,29 @@ export class Card extends PIXI.Container {
     renderFaceUp() {
         const color = this.getCardColor();
 
-        // Card background
-        this.bg.rect(0, 0, CARD_WIDTH, CARD_HEIGHT)
-            .fill(color);
+        // Cosmic star field background
+        this.drawStarField();
 
-        // Border (gold if playable, white otherwise)
-        const borderColor = this.isPlayable ? 0xFFD700 : 0xFFFFFF;
+        // Card background with gradient
+        this.drawCardBackground(color);
+
+        // Decorative cosmic frame
+        this.drawCosmicFrame();
+
+        // Border (gold if playable, cosmic purple otherwise)
+        const borderColor = this.isPlayable ? 0xFFD700 : 0x9966FF;
         const borderWidth = this.isPlayable ? 3 : 2;
 
         this.border.rect(0, 0, CARD_WIDTH, CARD_HEIGHT)
             .stroke({ color: borderColor, width: borderWidth });
 
+        // Corner ornaments
+        this.drawCornerOrnaments();
+
         // Clear previous text
         this.textContainer.removeChildren();
 
-        // Add card name
+        // Add card name with cosmic styling
         const nameText = new PIXI.Text({
             text: this.cardData.name || 'Unknown',
             style: {
@@ -124,13 +132,93 @@ export class Card extends PIXI.Container {
                 fill: 0xFFFFFF,
                 align: 'center',
                 wordWrap: true,
-                wordWrapWidth: CARD_WIDTH - 10,
-                fontWeight: 'bold'
+                wordWrapWidth: CARD_WIDTH - 16,
+                fontWeight: 'bold',
+                dropShadow: {
+                    alpha: 0.8,
+                    angle: Math.PI / 4,
+                    blur: 2,
+                    color: 0x000000,
+                    distance: 2
+                }
             }
         });
-        nameText.x = 5;
-        nameText.y = 5;
+        nameText.x = 8;
+        nameText.y = 6;
         this.textContainer.addChild(nameText);
+    }
+
+    /**
+     * Draw cosmic star field background
+     */
+    drawStarField() {
+        const stars = 15;
+        for (let i = 0; i < stars; i++) {
+            const x = Math.random() * CARD_WIDTH;
+            const y = Math.random() * CARD_HEIGHT;
+            const size = Math.random() * 1.5 + 0.5;
+            const alpha = Math.random() * 0.5 + 0.3;
+
+            this.bg.circle(x, y, size)
+                .fill({ color: 0xFFFFFF, alpha });
+        }
+    }
+
+    /**
+     * Draw card background with gradient effect
+     */
+    drawCardBackground(baseColor) {
+        // Main background with slight gradient simulation
+        this.bg.rect(0, 0, CARD_WIDTH, CARD_HEIGHT)
+            .fill(baseColor);
+
+        // Darker overlay at bottom for depth
+        this.bg.rect(0, CARD_HEIGHT * 0.6, CARD_WIDTH, CARD_HEIGHT * 0.4)
+            .fill({ color: 0x000000, alpha: 0.2 });
+    }
+
+    /**
+     * Draw decorative cosmic frame
+     */
+    drawCosmicFrame() {
+        // Inner frame inset
+        const inset = 6;
+        this.bg.rect(inset, inset, CARD_WIDTH - inset * 2, CARD_HEIGHT - inset * 2)
+            .stroke({ color: 0xFFFFFF, width: 1, alpha: 0.3 });
+    }
+
+    /**
+     * Draw corner ornaments
+     */
+    drawCornerOrnaments() {
+        const ornamentSize = 4;
+        const offset = 3;
+        const ornamentColor = 0x9966FF;
+        const alpha = 0.6;
+
+        // Top-left corner
+        this.bg.moveTo(offset, offset + ornamentSize)
+            .lineTo(offset, offset)
+            .lineTo(offset + ornamentSize, offset)
+            .stroke({ color: ornamentColor, width: 2, alpha });
+
+        // Top-right corner
+        this.bg.moveTo(CARD_WIDTH - offset - ornamentSize, offset)
+            .lineTo(CARD_WIDTH - offset, offset)
+            .lineTo(CARD_WIDTH - offset, offset + ornamentSize)
+            .stroke({ color: ornamentColor, width: 2, alpha });
+
+        // Bottom-left corner
+        this.bg.moveTo(offset, CARD_HEIGHT - offset - ornamentSize)
+            .lineTo(offset, CARD_HEIGHT - offset)
+            .lineTo(offset + ornamentSize, CARD_HEIGHT - offset)
+            .stroke({ color: ornamentColor, width: 2, alpha });
+
+        // Bottom-right corner
+        this.bg.moveTo(CARD_WIDTH - offset - ornamentSize, CARD_HEIGHT - offset)
+            .lineTo(CARD_WIDTH - offset, CARD_HEIGHT - offset)
+            .lineTo(CARD_WIDTH - offset, CARD_HEIGHT - offset - ornamentSize)
+            .stroke({ color: ornamentColor, width: 2, alpha });
     }
 
     /**
@@ -191,8 +279,8 @@ export class Card extends PIXI.Container {
      */
     onPointerOver() {
         if (this.isPlayable) {
-            this.alpha = 0.85;
-            this.scale.set(1.05);
+            this.animateHover(true);
+            this.animateFade(0.9, 0.1);
         }
     }
 
@@ -200,8 +288,14 @@ export class Card extends PIXI.Container {
      * Handle pointer out
      */
     onPointerOut() {
-        this.alpha = 1.0;
-        this.scale.set(1.0);
+        if (this.isPlayable) {
+            this.animateHover(false);
+            this.animateFade(1.0, 0.1);
+        } else {
+            // Reset scale and alpha immediately for non-playable cards
+            this.scale.set(1.0);
+            this.alpha = 1.0;
+        }
     }
 
     /**
@@ -249,34 +343,46 @@ export class Card extends PIXI.Container {
     /**
      * Animate card play
      */
-    async animatePlay(targetX, targetY) {
-        return new Promise((resolve) => {
-            const startX = this.x;
-            const startY = this.y;
-            const duration = 0.5;
-            let elapsed = 0;
+    async animatePlay(targetX, targetY, duration = 0.5) {
+        const animSystem = getAnimationSystem();
 
-            const animate = (delta) => {
-                elapsed += delta / 60;
-                const progress = Math.min(elapsed / duration, 1);
-
-                // Ease out cubic
-                const eased = 1 - Math.pow(1 - progress, 3);
-
-                this.x = startX + (targetX - startX) * eased;
-                this.y = startY + (targetY - startY) * eased;
-
-                if (progress >= 1) {
-                    resolve();
-                }
-            };
-
-            // TODO: Hook into animation system
-            // For now, just move instantly
+        if (!animSystem) {
+            // Fallback: move instantly if animation system not ready
             this.x = targetX;
             this.y = targetY;
-            resolve();
-        });
+            return Promise.resolve();
+        }
+
+        // Use animation system for smooth movement
+        return animSystem.animatePosition(this, targetX, targetY, duration, 'easeOutCubic');
+    }
+
+    /**
+     * Animate card hover (scale up)
+     */
+    async animateHover(isHovering) {
+        const animSystem = getAnimationSystem();
+
+        if (!animSystem) {
+            this.scale.set(isHovering ? 1.05 : 1.0);
+            return Promise.resolve();
+        }
+
+        return animSystem.animateScale(this, isHovering ? 1.05 : 1.0, 0.15);
+    }
+
+    /**
+     * Animate card fade
+     */
+    async animateFade(targetAlpha, duration = 0.3) {
+        const animSystem = getAnimationSystem();
+
+        if (!animSystem) {
+            this.alpha = targetAlpha;
+            return Promise.resolve();
+        }
+
+        return animSystem.animateAlpha(this, targetAlpha, duration);
     }
 
     /**

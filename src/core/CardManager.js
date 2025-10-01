@@ -26,10 +26,11 @@ export class CardManager {
 
     /**
      * Assign bosses to players
+     * Currently auto-assigns first two bosses for quick testing
+     * Future: Implement boss selection UI for player choice
      */
     assignAntagonists(bossesData) {
-        // For now, assign first two bosses
-        // TODO: Add boss selection UI
+        // Auto-assign first two bosses for now
         const bossKeys = Object.keys(bossesData);
         this.gameState.players[0].antagonist = { ...bossesData[bossKeys[0]], key: bossKeys[0] };
         this.gameState.players[1].antagonist = { ...bossesData[bossKeys[1]], key: bossKeys[1] };
