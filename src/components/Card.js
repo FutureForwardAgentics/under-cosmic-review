@@ -3,7 +3,7 @@
  * All card types extend from this base class
  */
 
-import { CARD_WIDTH, CARD_HEIGHT } from '../main.js';
+import { CARD_WIDTH, CARD_HEIGHT, getAnimationSystem } from '../main.js';
 
 export class Card extends PIXI.Container {
     constructor(cardData, cardType = 'room') {
@@ -279,8 +279,8 @@ export class Card extends PIXI.Container {
      */
     onPointerOver() {
         if (this.isPlayable) {
-            this.alpha = 0.85;
-            this.scale.set(1.05);
+            this.animateHover(true);
+            this.animateFade(0.9, 0.1);
         }
     }
 
@@ -288,8 +288,14 @@ export class Card extends PIXI.Container {
      * Handle pointer out
      */
     onPointerOut() {
-        this.alpha = 1.0;
-        this.scale.set(1.0);
+        if (this.isPlayable) {
+            this.animateHover(false);
+            this.animateFade(1.0, 0.1);
+        } else {
+            // Reset scale and alpha immediately for non-playable cards
+            this.scale.set(1.0);
+            this.alpha = 1.0;
+        }
     }
 
     /**
@@ -337,34 +343,46 @@ export class Card extends PIXI.Container {
     /**
      * Animate card play
      */
-    async animatePlay(targetX, targetY) {
-        return new Promise((resolve) => {
-            const startX = this.x;
-            const startY = this.y;
-            const duration = 0.5;
-            let elapsed = 0;
+    async animatePlay(targetX, targetY, duration = 0.5) {
+        const animSystem = getAnimationSystem();
 
-            const animate = (delta) => {
-                elapsed += delta / 60;
-                const progress = Math.min(elapsed / duration, 1);
-
-                // Ease out cubic
-                const eased = 1 - Math.pow(1 - progress, 3);
-
-                this.x = startX + (targetX - startX) * eased;
-                this.y = startY + (targetY - startY) * eased;
-
-                if (progress >= 1) {
-                    resolve();
-                }
-            };
-
-            // TODO: Hook into animation system
-            // For now, just move instantly
+        if (!animSystem) {
+            // Fallback: move instantly if animation system not ready
             this.x = targetX;
             this.y = targetY;
-            resolve();
-        });
+            return Promise.resolve();
+        }
+
+        // Use animation system for smooth movement
+        return animSystem.animatePosition(this, targetX, targetY, duration, 'easeOutCubic');
+    }
+
+    /**
+     * Animate card hover (scale up)
+     */
+    async animateHover(isHovering) {
+        const animSystem = getAnimationSystem();
+
+        if (!animSystem) {
+            this.scale.set(isHovering ? 1.05 : 1.0);
+            return Promise.resolve();
+        }
+
+        return animSystem.animateScale(this, isHovering ? 1.05 : 1.0, 0.15);
+    }
+
+    /**
+     * Animate card fade
+     */
+    async animateFade(targetAlpha, duration = 0.3) {
+        const animSystem = getAnimationSystem();
+
+        if (!animSystem) {
+            this.alpha = targetAlpha;
+            return Promise.resolve();
+        }
+
+        return animSystem.animateAlpha(this, targetAlpha, duration);
     }
 
     /**

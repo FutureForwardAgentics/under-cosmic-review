@@ -7,6 +7,7 @@ import { GameState } from './core/GameState.js';
 import { CardManager } from './core/CardManager.js';
 import { PhaseManager } from './core/GamePhases.js';
 import { InquisitorAI } from './core/InquisitorAI.js';
+import { AnimationSystem } from './systems/AnimationSystem.js';
 import { Card } from './components/Card.js';
 import { Boss } from './components/Boss.js';
 import { Hero } from './components/Hero.js';
@@ -30,6 +31,7 @@ let phaseManager;
 let inquisitorAI;
 let inquisitorPanel;
 let gameScene;
+let animationSystem;
 
 /**
  * Initialize Pixi.js Application
@@ -61,6 +63,9 @@ function initGameSystems() {
     // Create core game objects
     gameState = new GameState();
     cardManager = new CardManager(gameState);
+
+    // Initialize animation system
+    animationSystem = new AnimationSystem(app);
 
     // Initialize Inquisitor system
     inquisitorAI = new InquisitorAI(gameState);
@@ -327,6 +332,14 @@ window.passAction = function() {
     renderGame();
     updateUIElements();
 };
+
+/**
+ * Get the animation system instance
+ * Allows Card components to access animations
+ */
+export function getAnimationSystem() {
+    return animationSystem;
+}
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
