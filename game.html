@@ -1102,11 +1102,20 @@
         gameScene.addChild(heroArea);
         gameScene.addChild(schemeArea);
 
-        player1Area.y = GAME_HEIGHT - 200;
+        // Center player areas horizontally
+        // Max cards: 1 boss + 3 installations = 4 cards, plus hand cards
+        // Lair width: 4 * 80 + 3 * 10 = 350px
+        const lairWidth = 4 * (CARD_WIDTH + 10) - 10;
+        const playerAreaX = (GAME_WIDTH - lairWidth) / 2;
+
+        player1Area.x = playerAreaX;
+        player1Area.y = GAME_HEIGHT - 220;
+
+        player2Area.x = playerAreaX;
         player2Area.y = 50;
-        heroArea.x = 50;
+
+        // Hero and scheme areas will be centered dynamically in render functions
         heroArea.y = GAME_HEIGHT / 2 - 100;
-        schemeArea.x = GAME_WIDTH / 2 - 100;
         schemeArea.y = GAME_HEIGHT / 2 - 55;
 
         gameUI = { player1Area, player2Area, heroArea, schemeArea };
@@ -1138,9 +1147,13 @@
         lairContainer.y = playerIndex === 0 ? 0 : 80;
         container.addChild(lairContainer);
 
+        // Render hand cards (centered)
+        const handWidth = player.hand.length * (CARD_WIDTH + 10) - 10;
+        const handOffsetX = -handWidth / 2 + (2 * (CARD_WIDTH + 10)); // Offset to align with lair
+
         player.hand.forEach((card, index) => {
             const cardSprite = new PixiCard(card, 'room');
-            cardSprite.x = index * (CARD_WIDTH + 10);
+            cardSprite.x = handOffsetX + index * (CARD_WIDTH + 10);
 
             if (playerIndex === gameState.currentPlayer - 1 &&
                 gameState.currentPhase === 'INSTALLATION_CONSTRUCTION' &&
@@ -1151,9 +1164,10 @@
             handContainer.addChild(cardSprite);
         });
 
+        // Render lair (boss + installations)
         if (player.antagonist) {
             const bossCard = new PixiCard(player.antagonist, 'boss');
-            bossCard.x = playerIndex === 0 ? 0 : (4 * (CARD_WIDTH + 10));
+            bossCard.x = 0;
             lairContainer.addChild(bossCard);
         }
 
@@ -1161,27 +1175,43 @@
             const installCard = new PixiCard(installation, 'room');
             installCard.isFaceDown = installation.faceDown;
             installCard.updateVisuals();
-            installCard.x = playerIndex === 0 ?
-                (index + 1) * (CARD_WIDTH + 10) :
-                (3 - index) * (CARD_WIDTH + 10);
+            installCard.x = (index + 1) * (CARD_WIDTH + 10);
             lairContainer.addChild(installCard);
         });
     }
 
     function renderHeroes() {
+        if (gameState.protagonistsInCosmos.length === 0) return;
+
+        // Center heroes
+        const heroWidth = gameState.protagonistsInCosmos.length * (CARD_WIDTH + 10) - 10;
+        const heroOffsetX = -heroWidth / 2;
+
         gameState.protagonistsInCosmos.forEach((hero, index) => {
             const heroCard = new PixiCard(hero, 'hero');
-            heroCard.x = index * (CARD_WIDTH + 10);
+            heroCard.x = heroOffsetX + index * (CARD_WIDTH + 10);
             gameUI.heroArea.addChild(heroCard);
         });
+
+        // Center hero area itself
+        gameUI.heroArea.x = GAME_WIDTH / 2;
     }
 
     function renderTrials() {
+        if (gameState.currentCosmicTrial.length === 0) return;
+
+        // Center trials
+        const trialWidth = gameState.currentCosmicTrial.length * (CARD_WIDTH + 10) - 10;
+        const trialOffsetX = -trialWidth / 2;
+
         gameState.currentCosmicTrial.forEach((trial, index) => {
             const trialCard = new PixiCard(trial.cardData, trial.cardType);
-            trialCard.x = index * (CARD_WIDTH + 10);
+            trialCard.x = trialOffsetX + index * (CARD_WIDTH + 10);
             gameUI.schemeArea.addChild(trialCard);
         });
+
+        // Center scheme area itself
+        gameUI.schemeArea.x = GAME_WIDTH / 2;
     }
 
     function playCard(playerIndex, cardIndex) {
