@@ -276,9 +276,9 @@
                 <div class="status-label">Turn</div>
                 <div class="status-value" id="inquisitorTurn">1</div>
             </div>
-            <div class="status-item">
-                <div class="status-label">Current Player</div>
-                <div class="status-value" id="inquisitorPlayer">1</div>
+            <div class="status-item" id="activePlayerStatus">
+                <div class="status-label">Active Player</div>
+                <div class="status-value" id="inquisitorPlayer">—</div>
             </div>
         </div>
 
@@ -918,11 +918,11 @@
         getPhaseName() {
             const phaseNames = {
                 'COSMIC_INITIALIZATION': 'Initialization',
-                'PROTAGONIST_EMERGENCE': 'Protagonist Emergence',
-                'INSTALLATION_CONSTRUCTION': 'Installation Construction',
-                'COSMIC_ATTRACTION': 'Cosmic Attraction',
-                'TRIAL_EXECUTION': 'Trial Execution',
-                'COSMIC_EVALUATION': 'Cosmic Evaluation'
+                'PROTAGONIST_EMERGENCE': 'Beginning of Turn',
+                'INSTALLATION_CONSTRUCTION': 'Build Phase',
+                'COSMIC_ATTRACTION': 'Bait Phase',
+                'TRIAL_EXECUTION': 'Adventure Phase',
+                'COSMIC_EVALUATION': 'End of Turn'
             };
 
             return phaseNames[this.gameState.currentPhase] || this.gameState.currentPhase;
@@ -1305,7 +1305,19 @@
         // Update Inquisitor panel status display
         document.getElementById('inquisitorPhase').textContent = phaseName;
         document.getElementById('inquisitorTurn').textContent = gameState.turnNumber;
-        document.getElementById('inquisitorPlayer').textContent = gameState.currentPlayer;
+
+        // Only show Active Player during Build Phase and Adventure Phase
+        const activePlayerElement = document.getElementById('inquisitorPlayer');
+        const activePlayerStatus = document.getElementById('activePlayerStatus');
+
+        if (gameState.currentPhase === 'INSTALLATION_CONSTRUCTION' ||
+            gameState.currentPhase === 'TRIAL_EXECUTION') {
+            activePlayerElement.textContent = gameState.currentPlayer;
+            activePlayerStatus.style.opacity = '1';
+        } else {
+            activePlayerElement.textContent = '—';
+            activePlayerStatus.style.opacity = '0.4';
+        }
     }
 
     function startGame() {
