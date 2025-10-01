@@ -75,6 +75,38 @@
             font-style: italic;
         }
 
+        .inquisitor-status {
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid #FFD700;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 12px 0;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .status-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .status-label {
+            font-size: 10px;
+            color: #9966FF;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .status-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #FFD700;
+            text-transform: uppercase;
+        }
+
         .phase-indicator {
             font-size: 18px;
             font-weight: bold;
@@ -234,6 +266,22 @@
 
     <div id="inquisitorPanel">
         <div class="inquisitor-title">⚖️ Grand Galactic Inquisitor ⚖️</div>
+
+        <div class="inquisitor-status">
+            <div class="status-item">
+                <div class="status-label">Phase</div>
+                <div class="status-value" id="inquisitorPhase">Initialization</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">Turn</div>
+                <div class="status-value" id="inquisitorTurn">1</div>
+            </div>
+            <div class="status-item" id="activePlayerStatus">
+                <div class="status-label">Active Player</div>
+                <div class="status-value" id="inquisitorPlayer">—</div>
+            </div>
+        </div>
+
         <div class="inquisitor-text" id="inquisitorText">
             Cosmic evaluation protocols initializing...
         </div>
@@ -870,11 +918,11 @@
         getPhaseName() {
             const phaseNames = {
                 'COSMIC_INITIALIZATION': 'Initialization',
-                'PROTAGONIST_EMERGENCE': 'Protagonist Emergence',
-                'INSTALLATION_CONSTRUCTION': 'Installation Construction',
-                'COSMIC_ATTRACTION': 'Cosmic Attraction',
-                'TRIAL_EXECUTION': 'Trial Execution',
-                'COSMIC_EVALUATION': 'Cosmic Evaluation'
+                'PROTAGONIST_EMERGENCE': 'Beginning of Turn',
+                'INSTALLATION_CONSTRUCTION': 'Build Phase',
+                'COSMIC_ATTRACTION': 'Bait Phase',
+                'TRIAL_EXECUTION': 'Adventure Phase',
+                'COSMIC_EVALUATION': 'End of Turn'
             };
 
             return phaseNames[this.gameState.currentPhase] || this.gameState.currentPhase;
@@ -1102,11 +1150,20 @@
         gameScene.addChild(heroArea);
         gameScene.addChild(schemeArea);
 
-        player1Area.y = GAME_HEIGHT - 200;
+        // Center player areas horizontally
+        // Max cards: 1 boss + 3 installations = 4 cards, plus hand cards
+        // Lair width: 4 * 80 + 3 * 10 = 350px
+        const lairWidth = 4 * (CARD_WIDTH + 10) - 10;
+        const playerAreaX = (GAME_WIDTH - lairWidth) / 2;
+
+        player1Area.x = playerAreaX;
+        player1Area.y = GAME_HEIGHT - 220;
+
+        player2Area.x = playerAreaX;
         player2Area.y = 50;
-        heroArea.x = 50;
+
+        // Hero and scheme areas will be centered dynamically in render functions
         heroArea.y = GAME_HEIGHT / 2 - 100;
-        schemeArea.x = GAME_WIDTH / 2 - 100;
         schemeArea.y = GAME_HEIGHT / 2 - 55;
 
         gameUI = { player1Area, player2Area, heroArea, schemeArea };
@@ -1138,9 +1195,15 @@
         lairContainer.y = playerIndex === 0 ? 0 : 80;
         container.addChild(lairContainer);
 
+        // Render hand cards (centered to align with lair center)
+        const handWidth = player.hand.length * (CARD_WIDTH + 10) - 10;
+        const lairWidth = 4 * (CARD_WIDTH + 10) - 10; // Boss + 3 installations max
+        const lairCenterX = lairWidth / 2;
+        const handOffsetX = lairCenterX - (handWidth / 2);
+
         player.hand.forEach((card, index) => {
             const cardSprite = new PixiCard(card, 'room');
-            cardSprite.x = index * (CARD_WIDTH + 10);
+            cardSprite.x = handOffsetX + index * (CARD_WIDTH + 10);
 
             if (playerIndex === gameState.currentPlayer - 1 &&
                 gameState.currentPhase === 'INSTALLATION_CONSTRUCTION' &&
@@ -1151,9 +1214,10 @@
             handContainer.addChild(cardSprite);
         });
 
+        // Render lair (boss + installations)
         if (player.antagonist) {
             const bossCard = new PixiCard(player.antagonist, 'boss');
-            bossCard.x = playerIndex === 0 ? 0 : (4 * (CARD_WIDTH + 10));
+            bossCard.x = 0;
             lairContainer.addChild(bossCard);
         }
 
@@ -1161,27 +1225,43 @@
             const installCard = new PixiCard(installation, 'room');
             installCard.isFaceDown = installation.faceDown;
             installCard.updateVisuals();
-            installCard.x = playerIndex === 0 ?
-                (index + 1) * (CARD_WIDTH + 10) :
-                (3 - index) * (CARD_WIDTH + 10);
+            installCard.x = (index + 1) * (CARD_WIDTH + 10);
             lairContainer.addChild(installCard);
         });
     }
 
     function renderHeroes() {
+        if (gameState.protagonistsInCosmos.length === 0) return;
+
+        // Center heroes
+        const heroWidth = gameState.protagonistsInCosmos.length * (CARD_WIDTH + 10) - 10;
+        const heroOffsetX = -heroWidth / 2;
+
         gameState.protagonistsInCosmos.forEach((hero, index) => {
             const heroCard = new PixiCard(hero, 'hero');
-            heroCard.x = index * (CARD_WIDTH + 10);
+            heroCard.x = heroOffsetX + index * (CARD_WIDTH + 10);
             gameUI.heroArea.addChild(heroCard);
         });
+
+        // Center hero area itself
+        gameUI.heroArea.x = GAME_WIDTH / 2;
     }
 
     function renderTrials() {
+        if (gameState.currentCosmicTrial.length === 0) return;
+
+        // Center trials
+        const trialWidth = gameState.currentCosmicTrial.length * (CARD_WIDTH + 10) - 10;
+        const trialOffsetX = -trialWidth / 2;
+
         gameState.currentCosmicTrial.forEach((trial, index) => {
             const trialCard = new PixiCard(trial.cardData, trial.cardType);
-            trialCard.x = index * (CARD_WIDTH + 10);
+            trialCard.x = trialOffsetX + index * (CARD_WIDTH + 10);
             gameUI.schemeArea.addChild(trialCard);
         });
+
+        // Center scheme area itself
+        gameUI.schemeArea.x = GAME_WIDTH / 2;
     }
 
     function playCard(playerIndex, cardIndex) {
@@ -1210,7 +1290,10 @@
     }
 
     function updateUIElements() {
-        document.getElementById('phaseIndicator').textContent = phaseManager.getPhaseName();
+        const phaseName = phaseManager.getPhaseName();
+
+        // Update left panel
+        document.getElementById('phaseIndicator').textContent = phaseName;
         document.getElementById('turnNumber').textContent = gameState.turnNumber;
         document.getElementById('currentPlayer').textContent = gameState.currentPlayer;
         document.getElementById('p1Trials').textContent = gameState.players[0].cosmicTrials;
@@ -1218,6 +1301,23 @@
         document.getElementById('p2Trials').textContent = gameState.players[1].cosmicTrials;
         document.getElementById('p2Failures').textContent = gameState.players[1].cosmicFailures;
         document.getElementById('debugInfo').textContent = JSON.stringify(gameState.getDebugState(), null, 2);
+
+        // Update Inquisitor panel status display
+        document.getElementById('inquisitorPhase').textContent = phaseName;
+        document.getElementById('inquisitorTurn').textContent = gameState.turnNumber;
+
+        // Only show Active Player during Build Phase and Adventure Phase
+        const activePlayerElement = document.getElementById('inquisitorPlayer');
+        const activePlayerStatus = document.getElementById('activePlayerStatus');
+
+        if (gameState.currentPhase === 'INSTALLATION_CONSTRUCTION' ||
+            gameState.currentPhase === 'TRIAL_EXECUTION') {
+            activePlayerElement.textContent = gameState.currentPlayer;
+            activePlayerStatus.style.opacity = '1';
+        } else {
+            activePlayerElement.textContent = '—';
+            activePlayerStatus.style.opacity = '0.4';
+        }
     }
 
     function startGame() {

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Under Cosmic Review - Auto Test</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a2e;
+            color: #9966FF;
+            padding: 20px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            background: rgba(153, 102, 255, 0.1);
+            border-left: 3px solid #9966FF;
+        }
+        .error {
+            color: #F44336;
+            border-left-color: #F44336;
+        }
+        .success {
+            color: #4CAF50;
+            border-left-color: #4CAF50;
+        }
+        .phase {
+            color: #FFD700;
+            font-weight: bold;
+            border-left-color: #FFD700;
+        }
+        #gameLog {
+            max-height: 600px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        button {
+            background: #9966FF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #AA77FF;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 Under Cosmic Review - Automated Test</h1>
+    <div>
+        <button onclick="runFullGame()">Run Full Game Test</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    <div id="gameLog"></div>
+
+    <script>
+        const gameLog = document.getElementById('gameLog');
+
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            gameLog.appendChild(entry);
+            gameLog.scrollTop = gameLog.scrollHeight;
+        }
+
+        function clearLog() {
+            gameLog.innerHTML = '';
+        }
+
+        // Import game logic (simplified for testing)
+        class GameState {
+            constructor() {
+                this.currentPhase = 'COSMIC_INITIALIZATION';
+                this.currentPlayer = 1;
+                this.turnNumber = 1;
+                this.passedPlayers = [];
+
+                this.players = [
+                    { id: 1, antagonist: null, hand: [], installations: [], cosmicTrials: 0, cosmicFailures: 0, isAI: false },
+                    { id: 2, antagonist: null, hand: [], installations: [], cosmicTrials: 0, cosmicFailures: 0, isAI: true }
+                ];
+
+                this.protagonistsInCosmos = [];
+                this.currentCosmicTrial = [];
+                this.decks = { protagonists: [], installations: [] };
+                this.gameOver = false;
+                this.winner = null;
+            }
+
+            shuffleDeck(deck) {
+                for (let i = deck.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [deck[i], deck[j]] = [deck[j], deck[i]];
+                }
+            }
+
+            drawCard(playerIndex, deckType) {
+                const deck = this.decks[deckType];
+                if (deck.length === 0) return null;
+
+                const card = deck.pop();
+                const cardWithId = { ...card, id: Date.now() + Math.random() };
+                this.players[playerIndex].hand.push(cardWithId);
+                return cardWithId;
+            }
+
+            getTreasureCount(playerIndex, treasureType) {
+                const player = this.players[playerIndex];
+                let count = 0;
+
+                if (player.antagonist && player.antagonist.treasure[treasureType]) {
+                    count += player.antagonist.treasure[treasureType];
+                }
+
+                player.installations.forEach(installation => {
+                    if (installation && installation.treasure && installation.treasure[treasureType]) {
+                        count += installation.treasure[treasureType];
+                    }
+                });
+
+                return count;
+            }
+
+            checkVictory() {
+                this.players.forEach((player, index) => {
+                    if (player.cosmicTrials >= 10) {
+                        this.gameOver = true;
+                        this.winner = index + 1;
+                    } else if (player.cosmicFailures >= 5) {
+                        this.gameOver = true;
+                        this.winner = (index === 0) ? 2 : 1;
+                    }
+                });
+
+                return this.gameOver;
+            }
+        }
+
+        const BOSSES = {
+            monarch: { name: "The Monarch", xp: 500, treasure: { dramatic: 1 } },
+            drGirlfriend: { name: "Dr. Girlfriend", xp: 600, treasure: { corporate: 1 } }
+        };
+
+        const HEROES = [
+            { name: "Brock Samson", health: 6, treasureType: "government", isEpic: false },
+            { name: "Dean Venture", health: 3, treasureType: "science", isEpic: false },
+            { name: "Hank Venture", health: 4, treasureType: "dramatic", isEpic: false },
+            { name: "Colonel Gentleman", health: 5, treasureType: "government", isEpic: false }
+        ];
+
+        const ROOMS = [
+            { name: "Death Ray", damage: 3, treasure: { science: 1 } },
+            { name: "Dramatic Reveal", damage: 2, treasure: { dramatic: 1 } },
+            { name: "Boardroom", damage: 1, treasure: { corporate: 2 } },
+            { name: "Secret Lab", damage: 2, treasure: { science: 2 } },
+            { name: "Trap Corridor", damage: 2, treasure: { government: 1 } }
+        ];
+
+        function runFullGame() {
+            clearLog();
+            log('========================================', 'phase');
+            log('STARTING AUTO-TEST GAME', 'phase');
+            log('========================================', 'phase');
+
+            const gameState = new GameState();
+
+            // Initialize decks
+            log('Initializing decks...', 'info');
+            gameState.decks.protagonists = [...HEROES, ...HEROES]; // Duplicate for more cards
+            gameState.decks.installations = [...ROOMS, ...ROOMS, ...ROOMS]; // 3x for enough cards
+            gameState.shuffleDeck(gameState.decks.protagonists);
+            gameState.shuffleDeck(gameState.decks.installations);
+            log(`Hero deck: ${gameState.decks.protagonists.length} cards`, 'success');
+            log(`Installation deck: ${gameState.decks.installations.length} cards`, 'success');
+
+            // Assign bosses
+            log('Assigning antagonists...', 'info');
+            gameState.players[0].antagonist = { ...BOSSES.monarch };
+            gameState.players[1].antagonist = { ...BOSSES.drGirlfriend };
+            log(`Player 1: ${gameState.players[0].antagonist.name}`, 'success');
+            log(`Player 2: ${gameState.players[1].antagonist.name}`, 'success');
+
+            // Deal initial hands
+            log('Dealing initial hands (5 cards each)...', 'info');
+            for (let i = 0; i < 5; i++) {
+                gameState.drawCard(0, 'installations');
+                gameState.drawCard(1, 'installations');
+            }
+            log(`Player 1 hand: ${gameState.players[0].hand.length} cards`, 'success');
+            log(`Player 2 hand: ${gameState.players[1].hand.length} cards`, 'success');
+
+            // Run through multiple turns
+            let turnCount = 0;
+            const maxTurns = 5;
+
+            while (turnCount < maxTurns && !gameState.gameOver) {
+                turnCount++;
+                log('========================================', 'phase');
+                log(`TURN ${turnCount}`, 'phase');
+                log('========================================', 'phase');
+
+                // Protagonist Emergence Phase
+                log('PHASE: PROTAGONIST EMERGENCE', 'phase');
+                const heroesRevealed = [];
+                for (let i = 0; i < 2; i++) {
+                    const hero = gameState.decks.protagonists.pop();
+                    if (hero) {
+                        const heroWithId = { ...hero, id: Date.now() + Math.random() + i };
+                        gameState.protagonistsInCosmos.push(heroWithId);
+                        heroesRevealed.push(hero.name);
+                    }
+                }
+                log(`Revealed heroes: ${heroesRevealed.join(', ')}`, 'info');
+
+                // Draw phase cards
+                gameState.drawCard(0, 'installations');
+                gameState.drawCard(1, 'installations');
+                log('Each player draws 1 card', 'info');
+
+                // Installation Construction Phase
+                log('PHASE: INSTALLATION CONSTRUCTION', 'phase');
+                gameState.currentPhase = 'INSTALLATION_CONSTRUCTION';
+
+                // Player 1 plays a card
+                if (gameState.players[0].hand.length > 0 && gameState.players[0].installations.length < 3) {
+                    const cardIndex = Math.floor(Math.random() * gameState.players[0].hand.length);
+                    const card = gameState.players[0].hand.splice(cardIndex, 1)[0];
+                    card.faceDown = true;
+                    gameState.players[0].installations.push(card);
+                    log(`Player 1 plays: ${card.name} (face down)`, 'info');
+                } else {
+                    log('Player 1 passes', 'info');
+                }
+
+                // Player 2 (AI) plays a card
+                if (gameState.players[1].hand.length > 0 && gameState.players[1].installations.length < 3) {
+                    const cardIndex = Math.floor(Math.random() * gameState.players[1].hand.length);
+                    const card = gameState.players[1].hand.splice(cardIndex, 1)[0];
+                    card.faceDown = true;
+                    gameState.players[1].installations.push(card);
+                    log(`Player 2 (AI) plays: ${card.name} (face down)`, 'info');
+                } else {
+                    log('Player 2 (AI) passes', 'info');
+                }
+
+                // Reveal installations
+                log('Revealing all installations...', 'info');
+                gameState.players.forEach((player, pIdx) => {
+                    player.installations.forEach(inst => inst.faceDown = false);
+                    const instNames = player.installations.map(i => i.name).join(', ');
+                    log(`Player ${pIdx + 1} installations: ${instNames || '(none)'}`, 'info');
+                });
+
+                // Cosmic Attraction Phase
+                log('PHASE: COSMIC ATTRACTION', 'phase');
+                const attractions = [];
+                gameState.protagonistsInCosmos.forEach(hero => {
+                    const p1Treasure = gameState.getTreasureCount(0, hero.treasureType);
+                    const p2Treasure = gameState.getTreasureCount(1, hero.treasureType);
+
+                    let targetPlayer;
+                    if (p1Treasure > p2Treasure) {
+                        targetPlayer = 0;
+                    } else if (p2Treasure > p1Treasure) {
+                        targetPlayer = 1;
+                    } else {
+                        targetPlayer = Math.random() < 0.5 ? 0 : 1;
+                    }
+
+                    attractions.push({ hero: hero.name, targetPlayer: targetPlayer + 1, treasureType: hero.treasureType });
+                    gameState.currentCosmicTrial.push({ cardData: hero, cardType: 'hero', targetPlayer });
+
+                    log(`${hero.name} (${hero.treasureType}) → Player ${targetPlayer + 1} (P1:${p1Treasure} vs P2:${p2Treasure})`, 'info');
+                });
+
+                // Trial Execution Phase
+                log('PHASE: TRIAL EXECUTION', 'phase');
+                gameState.currentCosmicTrial.forEach(trial => {
+                    const protagonist = trial.cardData;
+                    const playerIndex = trial.targetPlayer;
+                    const player = gameState.players[playerIndex];
+
+                    let currentHealth = protagonist.health;
+                    let totalDamage = 0;
+
+                    player.installations.forEach(installation => {
+                        if (installation && currentHealth > 0) {
+                            const damage = installation.damage || 0;
+                            totalDamage += damage;
+                            currentHealth -= damage;
+                        }
+                    });
+
+                    if (currentHealth <= 0) {
+                        const trialsGained = protagonist.isEpic ? 2 : 1;
+                        player.cosmicTrials += trialsGained;
+                        log(`✓ Player ${playerIndex + 1} defeats ${protagonist.name} (${totalDamage} dmg vs ${protagonist.health} hp) +${trialsGained} trial(s)`, 'success');
+                    } else {
+                        const failuresGained = protagonist.isEpic ? 2 : 1;
+                        player.cosmicFailures += failuresGained;
+                        log(`✗ Player ${playerIndex + 1} FAILS vs ${protagonist.name} (${totalDamage} dmg, ${currentHealth} hp remains) +${failuresGained} failure(s)`, 'error');
+                    }
+                });
+
+                // Clear for next turn
+                gameState.protagonistsInCosmos = [];
+                gameState.currentCosmicTrial = [];
+
+                // Check victory
+                if (gameState.checkVictory()) {
+                    log('========================================', 'phase');
+                    log(`GAME OVER - Player ${gameState.winner} WINS!`, 'phase');
+                    log('========================================', 'phase');
+                    break;
+                }
+
+                // Display scores
+                log(`Scores: P1 (${gameState.players[0].cosmicTrials} trials, ${gameState.players[0].cosmicFailures} failures) vs P2 (${gameState.players[1].cosmicTrials} trials, ${gameState.players[1].cosmicFailures} failures)`, 'success');
+            }
+
+            log('========================================', 'phase');
+            log('TEST COMPLETE', 'phase');
+            log(`Final Scores:`, 'info');
+            log(`Player 1: ${gameState.players[0].cosmicTrials} trials, ${gameState.players[0].cosmicFailures} failures`, 'info');
+            log(`Player 2: ${gameState.players[1].cosmicTrials} trials, ${gameState.players[1].cosmicFailures} failures`, 'info');
+            log('========================================', 'phase');
+        }
+
+        // Auto-run test on load
+        window.addEventListener('DOMContentLoaded', () => {
+            log('Auto-running test in 2 seconds...', 'info');
+            setTimeout(runFullGame, 2000);
+        });
+    </script>
+</body>
+</html>
